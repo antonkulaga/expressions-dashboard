@@ -1,0 +1,24 @@
+name: dashboard
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.10
+  - jupyterlab
+  - scanpy
+  - click
+  - plotly
+  - pyarrow
+  - dash
+  - pip
+  - pip:
+      - pycomfort
+      - pyfunctional
+      - more-itertools
+      - primer3-py
+      - dna_features_viewer
+      - pyarrow
+      - polars
+      - genomepy
+      - genotations>=0.0.5

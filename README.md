@@ -1,2 +1,2 @@
 # expressions-dashboard
-Expression dashboard to visualize
+Expression dashboard to visualize gene expressions
