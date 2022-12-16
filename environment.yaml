@@ -17,8 +17,8 @@ dependencies:
       - pyfunctional
       - more-itertools
       - primer3-py
-      - dna_features_viewer
+      - git+https://github.com/MrTomRod/DnaFeaturesViewer
       - pyarrow
       - polars
       - genomepy
-      - genotations>=0.0.8
+      - genotations>=0.1.3

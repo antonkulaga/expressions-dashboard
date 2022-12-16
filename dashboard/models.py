@@ -35,7 +35,6 @@ class Bioproject:
             "fastq_ftp"
         ])
 
-
     @cached_property
     def transcripts(self) -> pl.DataFrame:
         p = self.folder / (self.id + "_extended_transcripts.parquet")
@@ -45,9 +44,11 @@ class Bioproject:
     @cached_property
     def genes(self) -> pl.DataFrame:
         return self.transcripts.select([pl.col("gene"), pl.col("gene_name")]).unique()
+
     @cached_property
     def gene_symbol_list(self):
         return self.genes.select(pl.col("gene_name")).to_series().to_list()
+
     @cached_property
     def exons(self) -> pl.DataFrame:
         p = self.folder / (self.id + "_exons.parquet")

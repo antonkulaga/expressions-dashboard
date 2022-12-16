@@ -1,24 +1,12 @@
 #!/usr/bin/env python3
 
-import genomepy
-from genomepy import Genome
-import genotations.genomes
-from pathlib import Path
-from pycomfort.files import *
-import pyarrow
-import pandas as pd
-from functional import seq
-from typing import *
-from genotations.genomes import Annotations
-import functools
-import click
-from genotations import ensembl
-from genotations.quantification import  *
 import os
 
-
 import polars as pl
-
+from genotations import ensembl
+from genotations.quantification import *
+import click
+from genotations.genomes import Strand
 
 """
 def search_in_expressions(df: pl.DataFrame,
@@ -69,7 +57,7 @@ def write_transcript(p: Path, output: Path, skip_if_exists: bool = True,
         extended_expressions.write_parquet(str(output / name_extended))
     if genome is not None:
         name_exons = p.stem + "_exons.parquet"
-        with_exons_info = annotations.with_genes_transcripts_exons_coordinates_only().extend_with_annotations_and_sequences(summarized_expressions, genome).drop("coordinates")
+        with_exons_info = annotations.with_genes_transcripts_exons_coordinates_only().extend_with_annotations_and_sequences(summarized_expressions, genome, Strand.Undefined).drop("coordinates")
         with_exons_info.write_parquet(str(output / name_exons), use_pyarrow = True)
     print(output / name_exons, "was successfully written")
 
@@ -107,6 +95,7 @@ def prepare(samples: str, output: str, skip_if_exist: bool = True,  species: str
     for p in bioprojects:
         write_transcript(p, output_path, skip_if_exist, annotations, genome, tpm_columns = pl.col("^SRR[a-zA-Z0-9]+$"))
     print('transcripts saved')
+
 
 if __name__ == '__main__':
     prepare()
