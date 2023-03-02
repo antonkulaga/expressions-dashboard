@@ -13,7 +13,7 @@ dependencies:
   - dash
   - pip
   - pip:
-      - pycomfort
+      - pycomfort>=0.0.12
       - pyfunctional
       - more-itertools
       - primer3-py
