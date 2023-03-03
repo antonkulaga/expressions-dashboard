@@ -10,12 +10,17 @@ def deep_find(p: Path, fun: Callable[[Path], bool], depth: int = -1):
     inside = dirs(p).map(lambda d: deep_find(d, fun, depth - 1)) if depth != 0 else seq([])
     return fl.union(folds).union(inside)
 
+
 class Cells:
 
     folder: Path
-    toc: Path
-    toc_samples: Path
+    toc_path: Path
+    toc: pl.DataFrame
+    toc_samples: pl.DataFrame
+
     def __init__(self, folder: Path):
         self.folder = folder
-        self.toc = pl.read_csv(self.folder / "cell_lines_toc.tsv", sep="\t")
+        self.toc_path = self.folder / "cell_lines_toc.tsv"
+        self.toc = pl.read_csv(str(self.toc_path), sep="\t")
         self.toc_samples = self.toc.filter(pl.col("Samples").str.contains("SAMN"))
+

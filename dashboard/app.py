@@ -9,17 +9,20 @@ from dash.development.base_component import Component
 from models import *
 from genotations.genomes import Annotations
 from genotations.primers import suggest_primers_for_transcript_by_exons, PrimerResults, PrimerResult
+from config import *
 
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output, State, MATCH
 
+from components import *
+
 app = dash.Dash(__name__, suppress_callback_exceptions=True)
 
 base = Path("..") if (Path("..") / "dashboard").exists() else Path(".")
-data = base / "data"
-inputs = data / "inputs"
+locations = Locations(base)
 
-bioprojects: list[Bioproject] = with_ext(inputs, ".tsv").map(lambda p: Bioproject(p.stem, inputs)).to_list()
+
+bioprojects: list[Bioproject] = with_ext(locations.inputs, ".tsv").map(lambda p: Bioproject(p.stem, locations.inputs)).to_list()
 bioprojects_by_id = {b.id: b for b in bioprojects}
 
 
@@ -42,79 +45,7 @@ app.layout = html.Div([
     html.Div(id='tabs-content')
 ])
 
-def _add_links(row: list[str], k: any, v: str):
-    if k == "sample_accession":
-        row[k] = f"[{v}](https://www.ncbi.nlm.nih.gov/biosample/{v})"
-    elif k == "study_accession":
-        row[k] = f"[{v}](https://www.ncbi.nlm.nih.gov/bioproject/?term={v})"
-    elif k == "run_accession":
-        row[k] = f"[{v}](https://trace.ncbi.nlm.nih.gov/Traces/index.html?view=run_browser&acc={v})"
-    elif k == "experiment_accession":
-        row[k] = f"[{v}](https://www.ncbi.nlm.nih.gov/sra/SRX5864477/{v})"
-    elif k == "gene":
-        row[k] = f"[{v}](https://www.ensembl.org/Mus_musculus/Gene/Summary?db=core;g={v})"
-    elif k == "transcript":
-        row[k] = f"[{v}](https://www.ensembl.org/Mus_musculus/Transcript/Summary?t={v})"
-    elif k == "gene_name":
-        row[k] = f"[{v}](https://www.genecards.org/cgi-bin/carddisp.pl?gene={v})"
 
-def df_to_table(df: pl.DataFrame, id: str = Component.UNDEFINED, of_type: str = "transcript_expressions") -> dash_table.DataTable:
-    name_ids = [{"name": i, "id": i, "presentation": "markdown"} for i in df.columns]
-    records: list[dict[str, any]] = df.to_dicts()
-    for row in records:
-        for k, v in row.items():
-            _add_links(row, k, v)
-            if isinstance(v, list):
-                row[k] = str(v)
-    return dash_table.DataTable(records, name_ids, id={
-        "type": of_type,
-        "index": id
-    },
-    style_data_conditional=[
-        {
-            'if': {'row_index': 'odd'},
-            'backgroundColor': 'rgb(220, 220, 220)',
-        },
-        {
-           'if': {'column_id': "sum_TPM"},
-           'backgroundColor': 'rgb(255, 255, 204)',
-        },
-        {
-            'if': {'column_id': "avg_TPM"},
-            'backgroundColor': 'rgb(255, 255, 204)',
-        }
-    ],
-    style_header={
-        'backgroundColor': 'rgb(210, 210, 210)',
-        'color': 'black',
-        'fontWeight': 'bold'
-    },
-    filter_action="native",
-    sort_action="native",
-    sort_mode="multi",
-    column_selectable="single",
-    row_selectable="multi"
-)
-
-def df_to_heatmap(df: pl.DataFrame,  title: str = "Heatmap", row_height: float = 40, col: pl.Expr = pl.col("transcript_name"), tpms: pl.Expr = pl.col("^SRR[a-zA-Z0-9]+$")) -> dcc.Graph:
-    from dash import dcc
-    import plotly.express as px
-
-    df_pandas = df.select(tpms).to_pandas()
-    y = df.select(col).to_series().to_list()
-    z_max = float(df_pandas.to_numpy().max())
-
-    fig = px.imshow(df_pandas,
-                    y = y,
-                    zmin=0.0,
-                    zmax=z_max,
-                    text_auto=True,
-                    aspect="auto",
-                    height=row_height * df.shape[0],
-                    title=title
-                    )
-
-    return dcc.Graph(figure=fig)
 
 
 @app.callback(Output('tabs-content', 'children'),
@@ -242,9 +173,9 @@ def update_exons(transcript_for_primer: str, tab: str):
 
     for row in records:
         for k, v in row.items():
-            _add_links(row, k, v)
+            row[k] = make_clickable(k, v)
     return records
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host="0.0.0.0")
+    app.run_server(debug=True, host="0.0.0.0", port=8050)
