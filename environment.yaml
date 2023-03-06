@@ -21,4 +21,4 @@ dependencies:
       - pyarrow
       - polars
       - genomepy
-      - genotations>=0.1.3
+      - genotations>=0.1.4

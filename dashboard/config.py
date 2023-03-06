@@ -15,7 +15,7 @@ class Locations:
     cell_lines: Path
     muscle_differentiation: Path
     def __init__(self, base: Path):
-        self.base = base
+        self.base = base.absolute().resolve()
         self.data = base / "data"
         self.inputs = self.data / "inputs"
         self.inputs.mkdir(exist_ok=True)
