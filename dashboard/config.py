@@ -13,6 +13,7 @@ class Locations:
     interim: Path
     output: Path
     cell_lines: Path
+    cell_lines_cache: Path
     muscle_differentiation: Path
     def __init__(self, base: Path):
         self.base = base.absolute().resolve()
@@ -26,3 +27,5 @@ class Locations:
         self.cell_lines = self.inputs / "cell_lines"
         self.cell_lines.mkdir(exist_ok=True)
         self.muscle_differentiation = self.inputs / "muscle_differentiation"
+        self.cell_lines_cache = self.cell_lines / "CACHE"
+        self.cell_lines_cache.mkdir(exist_ok=True, parents=True)

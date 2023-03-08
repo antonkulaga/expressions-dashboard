@@ -1,3 +1,5 @@
 *
 !.gitignore
 !cell_lines_toc.tsv
+!CACHE/*
+!CACHE

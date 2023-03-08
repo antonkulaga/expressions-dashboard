@@ -1,7 +1,9 @@
+import dataclasses
 from typing import *
 from pathlib import Path
 
 import genotations.ensembl
+import pandas as pd
 import polars as pl
 from pycomfort.files import *
 from functional import seq
@@ -70,13 +72,22 @@ class Sample:
     gene_expressions: pl.DataFrame
     transcript_expressions: pl.DataFrame
     parent_name: str
+
+    @staticmethod
+    def samples_to_df(samples: list['Sample']) -> Optional[pl.DataFrame]:
+        metas = seq(samples).map(lambda s: s.meta).to_list()
+        if len(metas) == 0:
+            return None
+        elif len(metas) == 1:
+            return metas[0]
+        else:
+            return pl.concat(metas)
+
     def __init__(self, folder: Path, autoload_runs: bool = False):
         self.folder = folder.absolute().resolve()
         self.meta = pl.read_csv(folder / f"{folder.name}.tsv", sep="\t")
         self.parent_name = self.folder.parent.name
-
         self.run_list = [Run(d, folder, autoload_runs) for d in self.meta.to_dicts()]
-        #self.runs = collections.OrderedDict([(run.run_accession, run) for run in self.run_list])
 
 
     def load(self) -> Run:
@@ -86,6 +97,106 @@ class Sample:
         return self
 
 
+class SpeciesExpressions:
+
+    species: str
+    gene_expressions: Optional[pl.DataFrame]
+    transcript_expressions: Optional[pl.DataFrame]
+    transcript_expressions_with_exons: Optional[pl.DataFrame]
+
+    @staticmethod
+    def load_summary_from(folder: Path, species: str):
+        gene_expressions_path = folder / f"{species}_gene_expressions.parquet"
+        transcript_expressions_path = folder / f"{species}_transcript_expressions.parquet"
+        transcript_expressions_with_exons_path = folder / f"{species}_transcript_expressions_with_exons.parquet"
+        assert gene_expressions_path.exists(), f"gene expressions should exist for {species}"
+        assert transcript_expressions_path.exists(), f"transcript expressions should exist for {species}"
+        assert transcript_expressions_with_exons_path.exists(), f"{str(transcript_expressions_with_exons_path)} should exist for {species}"
+        return SpeciesExpressions(species,
+                           pl.read_parquet(str(gene_expressions_path)),
+                           pl.read_parquet(str(transcript_expressions_path)),
+                           pl.read_parquet(str(transcript_expressions_with_exons_path))
+        )
+
+    @staticmethod
+    def load_summaries_from(folder: Path):
+        species = files(folder).filter(lambda d: "_transcript_expressions.parquet" in d.name)\
+            .map(lambda v: v.name.replace("_transcript_expressions.parquet", ""))
+        return species.map(lambda s: SpeciesExpressions.load_summary_from(folder, s))
+
+    def __init__(self, species: str,
+                 gene_expressions: Optional[pl.DataFrame],
+                 transcript_expressions: Optional[pl.DataFrame],
+                 transcript_expressions_with_exons: Optional[pl.DataFrame]
+                 ):
+        self.species = species.replace(" ", "_")
+        self.gene_expressions = gene_expressions
+        self.transcript_expressions = transcript_expressions
+        self.transcript_expressions_with_exons = transcript_expressions_with_exons
+
+    def write(self, folder: Path):
+        folder.mkdir(exist_ok=True, parents=True)
+        gene_expressions_path = folder / f"{self.species}_gene_expressions.parquet"
+        transcript_expressions_path = folder / f"{self.species}_transcript_expressions.parquet"
+        transcript_expressions_with_exons_path = folder / f"{self.species}_transcript_expressions_with_exons.parquet"
+        self.gene_expressions.write_parquet(str(gene_expressions_path))
+        self.transcript_expressions.write_parquet(str(transcript_expressions_path))
+        self.transcript_expressions_with_exons.write_parquet(str(transcript_expressions_with_exons_path))
+        print(f"writing {gene_expressions_path} and {transcript_expressions_path}")
+        return folder
+
+    def annotator(self) -> genotations.genomes.Annotations:
+        assert self.species in genotations.ensembl.species, f"species {self.species} should be in the genotations ensembl list!"
+        return genotations.ensembl.species[self.species].annotations
+
+
+
+    def is_empty(self):
+        return self.transcript_expressions is None
+
+
+    @staticmethod
+    def empty(species: str):
+        return SpeciesExpressions(species, None, None, None)
+
+
+    @staticmethod
+    def summaries_from_samples(selected_samples: list[Sample]):
+        runs_list: list[Run] = seq(selected_samples).flat_map(lambda s: s.run_list).to_list()
+        return SpeciesExpressions.summaries_from_runs(runs_list)
+
+    @staticmethod
+    def summaries_from_runs(runs_list: List[Run]):
+        return seq(runs_list).group_by(lambda run: run.scientific_name.replace(" ", "_")) \
+            .map(lambda v: SpeciesExpressions.from_runs(v[0], v[1])).to_list()
+
+
+    @staticmethod
+    def from_runs(species: str, runs: List[Run]) -> 'SpeciesExpressions':
+        """
+        Summarizes expressions from runs on species basis
+        :param species:
+        :param runs:
+        :return:
+        """
+        assert species in genotations.ensembl.species, f"species f{species} was not found in genotations ensembl species dictionary!"
+        species_info: genotations.ensembl.SpeciesInfo = genotations.ensembl.species[species]
+        for_dic = seq(runs).map(lambda r: (r.run_accession, r.load().genes)).filter(lambda rg: rg[1] is not None)
+        if for_dic.len() > 0:
+            genes_for_merge = collections.OrderedDict(for_dic)
+            merged_genes = genotations.quantification.merge_expressions(genes_for_merge, False)
+            #merged_genes_extended = species_info.annotations.extend_with_annotations(merged_genes)
+            print(f"genes summarized for {species}: runs {len(genes_for_merge)}, merged genes shape {merged_genes.shape}")
+            transcripts_for_merge = collections.OrderedDict(seq(runs).map(lambda r: (r.run_accession, r.load().transcripts)).to_list())
+            merged_transcripts = genotations.quantification.merge_expressions(transcripts_for_merge, True)
+            merged_transcripts_extended = species_info.annotations.with_genes_transcripts_coordinates_only().extend_with_annotations(merged_transcripts)
+            print(f"transcripts summarized for {species}: runs {len(genes_for_merge)}, merged transcripts shape {merged_genes.shape}")
+            merged_transcripts_extended_exons = species_info.annotations.with_genes_transcripts_exons_coordinates_only().extend_with_annotations(merged_transcripts)
+            return SpeciesExpressions(species, merged_genes, merged_transcripts_extended, merged_transcripts_extended_exons )
+        else:
+            print(f"no quantified transcripts found in {seq(runs).reduce(lambda a,b: a.run_accession+';'+b.run_accession)}")
+            return SpeciesExpressions.empty(species)
+
 
 class Cells:
 
@@ -94,16 +205,22 @@ class Cells:
     toc: pl.DataFrame
     toc_samples: pl.DataFrame
 
+    #samples: List[Sample]
+    species_expressions: list[SpeciesExpressions]
+
+
     def __init__(self, folder: Path):
         self.folder = folder.absolute().resolve()
         self.toc_path = self.folder / "cell_lines_toc.tsv"
         self.toc = pl.read_csv(str(self.toc_path), sep="\t")
         self.toc_samples = self.toc.filter(pl.col("Samples").str.contains("SAMN"))
+        self.samples = self.extract_all_samples()
+        #self.species_expressions = SpeciesExpressions.summaries_from_samples(self.samples)
 
     def extract_samples_from_row(self, row: dict, autoload: bool = False) -> Sequence:
         cell_line: str = row["Cell line name"]
         cell_line_folder = (self.folder / cell_line.strip()).absolute().resolve()
-        if cell_line_folder.exists() == False:
+        if not cell_line_folder.exists():
             print(f"cell line {cell_line_folder} does not seem to exist!")
             return []
         return seq(row["Samples"].split(",")).map(lambda s: cell_line_folder / s)\
@@ -114,33 +231,7 @@ class Cells:
         return seq(self.toc_samples.to_dicts()).flat_map(lambda s: self.extract_samples_from_row(s, autoload)).to_list()
 
 
-class ExpressionSelection:
 
-    selected_samples: list[Sample]
-    runs_list: List[Run]
-    runs_by_species: OrderedDict[str, List[Run]]
-    gene_expressions: OrderedDict[str, pl.DataFrame]
-    transcript_expressions: OrderedDict[str, pl.DataFrame]
-
-    def __init__(self, selected_samples: list[Sample]):
-        self.selected_samples = selected_samples
-        self.runs_list = seq(self.selected_samples).flat_map(lambda s: s.run_list).to_list()
-        self.runs_by_species = collections.OrderedDict(seq(self.runs_list).group_by(lambda r: r.scientific_name.replace(" ", "_")).to_list())
-        acc_genes: list[(str, pl.DataFrame)] = [] #yes, it is ugly, I know
-        acc_transcripts: list[(str, pl.DataFrame)] = [] #yes, it is ugly, I know
-        for s, runs in self.runs_by_species.items():
-            if s not in genotations.ensembl.species:
-                print(f"{s} was not found in genotations!")
-            else:
-                species_info: genotations.ensembl.SpeciesInfo = genotations.ensembl.species[s]
-                genes_for_merge = collections.OrderedDict(seq(runs).map(lambda r: (r.run_accession, r.load().genes)).to_list())
-                merged_genes = genotations.quantification.merge_expressions(genes_for_merge, False)
-                acc_genes.append((species_info.species_name, merged_genes))
-                transcripts_for_merge = collections.OrderedDict(seq(runs).map(lambda r: (r.run_accession, r.load().transcripts)).to_list())
-                merged_transcripts = genotations.quantification.merge_expressions(transcripts_for_merge, True)
-                acc_transcripts.append((species_info.species_name, merged_transcripts))
-        self.gene_expressions = collections.OrderedDict(acc_genes)
-        self.transcript_expressions = collections.OrderedDict(acc_transcripts)
 
 
 
