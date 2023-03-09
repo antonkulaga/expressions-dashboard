@@ -204,6 +204,7 @@ class Cells:
     toc_path: Path
     toc: pl.DataFrame
     toc_samples: pl.DataFrame
+    cache_folder: Path
 
     #samples: List[Sample]
     species_expressions: list[SpeciesExpressions]
@@ -215,7 +216,16 @@ class Cells:
         self.toc = pl.read_csv(str(self.toc_path), sep="\t")
         self.toc_samples = self.toc.filter(pl.col("Samples").str.contains("SAMN"))
         self.samples = self.extract_all_samples()
-        #self.species_expressions = SpeciesExpressions.summaries_from_samples(self.samples)
+        self.cache_folder = folder / "CACHE"
+        if self.cache_folder.exists() and files(self.cache_folder).len() >= 3:
+            self.species_expressions = SpeciesExpressions.load_summaries_from(self.cache_folder)
+        else:
+            print(f"no cache folder found, producing expressions from samples and writing cache to {self.cache_folder}!")
+            self.species_expressions = SpeciesExpressions.summaries_from_samples(self.samples)
+            self.cache_folder.mkdir(exist_ok=True, parents=True)
+            for s in self.species_expressions:
+                s.write(self.cache_folder)
+
 
     def extract_samples_from_row(self, row: dict, autoload: bool = False) -> Sequence:
         cell_line: str = row["Cell line name"]
@@ -223,7 +233,7 @@ class Cells:
         if not cell_line_folder.exists():
             print(f"cell line {cell_line_folder} does not seem to exist!")
             return []
-        return seq(row["Samples"].split(",")).map(lambda s: cell_line_folder / s)\
+        return seq(row["Samples"].split(",")).map(lambda s: cell_line_folder / s.strip())\
             .filter(lambda s: s.exists() and (s / f"{s.name}.tsv").exists())\
             .map(lambda f: Sample(f, autoload))
 

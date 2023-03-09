@@ -6,7 +6,7 @@ from dash.development.base_component import Component
 from functional.pipeline import Sequence
 
 from config import Locations
-from cell_models import Cells
+from cell_models import Cells, Sample
 from models import *
 from components import *
 from dash import Dash, dcc, html
@@ -42,14 +42,11 @@ def render(rows: dict, selected_row_indexes: dict):
     if not selected_indexes:
         return html.Div(["Select cell lines!"])
     selected_rows = [rows[i] for i in selected_indexes]
-    selected_samples = seq(selected_rows)\
-        .flat_map(
-            lambda r: _extract_samples(r).map(lambda s: {
-                "sample": s,
-                "cell_line": r["Cell line name"]
-            }))\
-        .to_list()
-    selected_df = pl.from_dicts(selected_samples)
+    print(f"print ROWS ARE: {selected_rows}")
+    selected_samples: list[Sample] = seq(selected_rows).flat_map(lambda row: cells.extract_samples_from_row(row)).to_list()
+    print(f"SAMPLES: {selected_samples}")
+    print(f"RUN LIST IS {[r.run_accession for r in selected_samples[0].run_list]}")
+    selected_df = Sample.samples_to_df(selected_samples)
     table = df_to_table(selected_df, index="selected", of_type="samples")
     return table
 
