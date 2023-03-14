@@ -1,23 +1,23 @@
 Cell line name	URL	Species	Phenotype	Tissue	Samples	Modified lines	Owners	Sources	Commens
 Alpha TC1 clone 6	https://www.cellosaurus.org/CVCL_B036	Human	Alpha Cells	Pancreas	N/A		Molecular Cell Biology Department		
-Glu-Tag	https://www.cellosaurus.org/CVCL_J406	Mouse	Murine enteroendocrine		https://www.ebi.ac.uk/ena/browser/view/PRJNA798250 //TODO Single         	INS-1+EDEM1, EDEM2, EDEM3, XTP-3B, OS-9.1, OS9.2 (IBAR)	Molecular Cell Biology Department		
+Glu-Tag	https://www.cellosaurus.org/CVCL_J406	Mouse	Murine enteroendocrine		SAMN25059472, SAMN25059473, SAMN25059474, SAMN25059475	INS-1+EDEM1, EDEM2, EDEM3, XTP-3B, OS-9.1, OS9.2 (IBAR)	Molecular Cell Biology Department		
 INS-1	https://www.cellosaurus.org/CVCL_0352	Rat	Celule Beta de insulinom 	Insulinom/Pancreas	SAMN07421988, SAMN07421989, SAMN07421987, SAMN07421986		Molecular Cell Biology Department		
 1.1B4	https://www.cellosaurus.org/CVCL_1778	Human	Contamenation	Pancreas	N/A		Molecular Cell Biology Department		
-PANC-1	https://www.cellosaurus.org/CVCL_0480	Rat	Beta cells	Pancreas	SAMN10460093, SAMN06642004		Molecular Cell Biology Department		
+PANC-1 	https://www.cellosaurus.org/CVCL_0480	Rat	Beta cells	Pancreas	SAMN10460093, SAMN06642004		Molecular Cell Biology Department		
 MelJuSo 	https://www.cellosaurus.org/CVCL_1403	Human	Celule de melanom uman faza VGP	Melanoma	SAMN07168087, SAMN07168088, SAMN07168089, SAMN07168090, SAMN07168091, SAMN07168092		Molecular Cell Biology Department		
 SKMel 28	https://www.cellosaurus.org/CVCL_0526	Human	Celule melanom uman , amelanotic metastatic				Molecular Cell Biology Department		
-SKMel 23	https://www.cellosaurus.org/CVCL_6027	Human	Celule melanom uman				Molecular Cell Biology Department		
-MNT-1	https://www.cellosaurus.org/CVCL_5624	Human	Human melanoma cells, pigmented, metastatic	Melanoma, metastatic			Molecular Cell Biology Department		
+SKMel 23	https://www.cellosaurus.org/CVCL_6027	Human	Celule melanom uman		SRR11319892, SRR11319893		Molecular Cell Biology Department		
+MNT-1	https://www.cellosaurus.org/CVCL_5624	Human	Human melanoma cells, pigmented, metastatic	Melanoma, metastatic	N/A		Molecular Cell Biology Department		
 A375 	https://www.cellosaurus.org/CVCL_0132	Human					Molecular Cell Biology Department		
 HEK293T	https://www.cellosaurus.org/CVCL_0063	Human	Celule umane embrionare de rinichi	Human kidney	SAMN22420271, SAMN22420269, SAMN22420270		Molecular Cell Biology Department, Enzymology Department		
 Me290	https://www.cellosaurus.org/CVCL_S598	Human			N/A		Molecular Cell Biology Department		
 Me275	https://www.cellosaurus.org/CVCL_S597	Human			SINGLE https://www.ebi.ac.uk/ena/browser/view/SRX025092		Molecular Cell Biology Department		
-Me319	N/A						Molecular Cell Biology Department		
-Me310	N/A						Molecular Cell Biology Department		
+Me319	N/A				N/A		Molecular Cell Biology Department		
+Me310	N/A				N/A		Molecular Cell Biology Department		
 CCD-1070Sk	https://www.cellosaurus.org/CVCL_2332				SAMN21374231, SAMN21374232, SAMN21374233, SAMN21374234 		Molecular Cell Biology Department		
-NHEM	https://www.ebi.ac.uk/ena/browser/view/SAMN09464676	Human	THERE ARE TWO NHEM LINES				Molecular Cell Biology Department		
+NHEM	https://www.cellosaurus.org/CVCL_B447	Human	THERE ARE TWO NHEM LINES				Molecular Cell Biology Department		
 BV2	https://www.cellosaurus.org/CVCL_0182	Mouse	Ms Miroglia	Microglia			Molecular Cell Biology Department		
-J77A1	N/A						Molecular Cell Biology Department		
+J77A1	N/A				N/A		Molecular Cell Biology Department		
 RAW 264.7	https://www.cellosaurus.org/CVCL_0493	Mouse			SAMN32489934, SAMN32489935		Molecular Cell Biology Department		FAILED, need to redo
 SKOV3	https://www.cellosaurus.org/CVCL_0532	Human			SAMN20710030 , SAMN20710031, SAMN20710032 		Molecular Cell Biology Department		
 OVCAR5	https://www.cellosaurus.org/CVCL_1628	Human	Cell line contamination	Cell line contamination			Molecular Cell Biology Department		
@@ -25,9 +25,9 @@ B16F10	https://www.cellosaurus.org/CVCL_0159	Mouse		Melanoma	SAMN22137224, SAMN2
 B16F1	https://www.cellosaurus.org/CVCL_0158	Mouse			SAMN07340361, SAMN07340362, SAMN07340363		Ligand-Receptor Interactions Department		
 THP-1	https://www.cellosaurus.org/CVCL_0006	Human		macrophages	SAMN16623487, SAMN16623488, SAMN16623489		Ligand-Receptor Interactions Department		
 MDBK	https://www.cellosaurus.org/CVCL_0421	Bovine		Kidney	SAMN04378088		Ligand-Receptor Interactions Department		
-HepaRG	https://www.cellosaurus.org/CVCL_9720						Ligand-Receptor Interactions Department		
-HepG2	https://www.cellosaurus.org/CVCL_0027						Ligand-Receptor Interactions Department		
-Huh7	https://www.cellosaurus.org/CVCL_0336						Ligand-Receptor Interactions Department		
+HepaRG	https://www.cellosaurus.org/CVCL_9720	Human	Hepatocellular carcinoma , Hepatitis C infected	Liver	"SRR5087489", "SRR5087490", "SRR5087500", "SRR5087501"		Ligand-Receptor Interactions Department		
+HepG2	https://www.cellosaurus.org/CVCL_0027		Problematic cell line: Misclassified. Originally thought to be a hepatocellular carcinoma cell line but shown to be from an hepatoblastoma				Ligand-Receptor Interactions Department		
+Huh7	https://www.cellosaurus.org/CVCL_0336		Adult hepatocellular carcinoma				Ligand-Receptor Interactions Department		
 Colo205	https://www.cellosaurus.org/CVCL_F402						Ligand-Receptor Interactions Department		
 HT-29	https://www.cellosaurus.org/CVCL_0320						Ligand-Receptor Interactions Department, 		
 HCT8	https://www.cellosaurus.org/CVCL_2478						Ligand-Receptor Interactions Department		
@@ -40,7 +40,7 @@ EA.hy926	https://www.cellosaurus.org/CVCL_3901
 EPC	N/A		CLARIFICATION NEEDED						
 CHO	https://www.cellosaurus.org/CVCL_0213								
 COS-7	https://www.cellosaurus.org/CVCL_0224								
-Jurkat	https://www.cellosaurus.org/CVCL_0065								
+Jurkat	https://www.cellosaurus.org/CVCL_0065	Human	Childhood T acute lymphoblastic leukemia		"SAMN01985824", "SAMN01985825", "SAMN01985826"				
 U937	https://www.cellosaurus.org/CVCL_0007								
 SHSY-5Y	https://www.cellosaurus.org/CVCL_0019								
 LNCaP	https://www.cellosaurus.org/CVCL_0395								

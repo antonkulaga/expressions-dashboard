@@ -81,7 +81,7 @@ class Sample:
         elif len(metas) == 1:
             return metas[0]
         else:
-            return pl.concat(metas)
+            return pl.concat(metas).with_column(pl.col("scientific_name").str.replace(" ", "_"))
 
     def __init__(self, folder: Path, autoload_runs: bool = False):
         self.folder = folder.absolute().resolve()
@@ -103,19 +103,23 @@ class SpeciesExpressions:
     gene_expressions: Optional[pl.DataFrame]
     transcript_expressions: Optional[pl.DataFrame]
     transcript_expressions_with_exons: Optional[pl.DataFrame]
+    gene_names: Optional[pl.DataFrame]
 
     @staticmethod
     def load_summary_from(folder: Path, species: str):
         gene_expressions_path = folder / f"{species}_gene_expressions.parquet"
         transcript_expressions_path = folder / f"{species}_transcript_expressions.parquet"
         transcript_expressions_with_exons_path = folder / f"{species}_transcript_expressions_with_exons.parquet"
+        gene_names_path = folder / f"{species}_gene_names.parquet"
         assert gene_expressions_path.exists(), f"gene expressions should exist for {species}"
         assert transcript_expressions_path.exists(), f"transcript expressions should exist for {species}"
         assert transcript_expressions_with_exons_path.exists(), f"{str(transcript_expressions_with_exons_path)} should exist for {species}"
+        gene_names_df = pl.read_parquet(gene_names_path) if gene_expressions_path.exists() else None
         return SpeciesExpressions(species,
                            pl.read_parquet(str(gene_expressions_path)),
                            pl.read_parquet(str(transcript_expressions_path)),
-                           pl.read_parquet(str(transcript_expressions_with_exons_path))
+                           pl.read_parquet(str(transcript_expressions_with_exons_path)),
+                           gene_names_df
         )
 
     @staticmethod
@@ -127,21 +131,25 @@ class SpeciesExpressions:
     def __init__(self, species: str,
                  gene_expressions: Optional[pl.DataFrame],
                  transcript_expressions: Optional[pl.DataFrame],
-                 transcript_expressions_with_exons: Optional[pl.DataFrame]
+                 transcript_expressions_with_exons: Optional[pl.DataFrame],
+                 gene_names: Optional[pl.DataFrame] = None
                  ):
         self.species = species.replace(" ", "_")
         self.gene_expressions = gene_expressions
         self.transcript_expressions = transcript_expressions
         self.transcript_expressions_with_exons = transcript_expressions_with_exons
+        self.gene_names = self.annotator().gene_names_df.filter(pl.col("gene_name").is_not_null()) if gene_names is None else gene_names
 
     def write(self, folder: Path):
         folder.mkdir(exist_ok=True, parents=True)
         gene_expressions_path = folder / f"{self.species}_gene_expressions.parquet"
         transcript_expressions_path = folder / f"{self.species}_transcript_expressions.parquet"
         transcript_expressions_with_exons_path = folder / f"{self.species}_transcript_expressions_with_exons.parquet"
-        self.gene_expressions.write_parquet(str(gene_expressions_path))
-        self.transcript_expressions.write_parquet(str(transcript_expressions_path))
-        self.transcript_expressions_with_exons.write_parquet(str(transcript_expressions_with_exons_path))
+        gene_names_path = folder / f"{self.species}_gene_names.parquet"
+        self.gene_expressions.write_parquet(str(gene_expressions_path), compression_level=22, use_pyarrow=True)
+        self.transcript_expressions.write_parquet(str(transcript_expressions_path), compression_level=22, use_pyarrow=True)
+        self.transcript_expressions_with_exons.write_parquet(str(transcript_expressions_with_exons_path), compression_level=22, use_pyarrow=True)
+        self.annotator().gene_names_df.filter(pl.col("gene_name").is_not_null()).write_parquet(gene_names_path, compression_level=22, use_pyarrow=True)
         print(f"writing {gene_expressions_path} and {transcript_expressions_path}")
         return folder
 
@@ -185,16 +193,17 @@ class SpeciesExpressions:
         if for_dic.len() > 0:
             genes_for_merge = collections.OrderedDict(for_dic)
             merged_genes = genotations.quantification.merge_expressions(genes_for_merge, False)
-            #merged_genes_extended = species_info.annotations.extend_with_annotations(merged_genes)
-            print(f"genes summarized for {species}: runs {len(genes_for_merge)}, merged genes shape {merged_genes.shape}")
             transcripts_for_merge = collections.OrderedDict(seq(runs).map(lambda r: (r.run_accession, r.load().transcripts)).to_list())
             merged_transcripts = genotations.quantification.merge_expressions(transcripts_for_merge, True)
-            merged_transcripts_extended = species_info.annotations.with_genes_transcripts_coordinates_only().extend_with_annotations(merged_transcripts)
-            print(f"transcripts summarized for {species}: runs {len(genes_for_merge)}, merged transcripts shape {merged_genes.shape}")
-            merged_transcripts_extended_exons = species_info.annotations.with_genes_transcripts_exons_coordinates_only().extend_with_annotations(merged_transcripts)
+            merged_summarized_transcripts =  genotations.quantification.with_expressions_summaries(merged_transcripts)
+            merged_transcripts_extended = species_info.annotations.with_genes_transcripts_coordinates_only().extend_with_annotations(merged_summarized_transcripts)
+            merged_transcripts_extended_exons = species_info.annotations.with_genes_transcripts_exons_coordinates_only().extend_with_annotations(merged_summarized_transcripts)
             return SpeciesExpressions(species, merged_genes, merged_transcripts_extended, merged_transcripts_extended_exons )
         else:
-            print(f"no quantified transcripts found in {seq(runs).reduce(lambda a,b: a.run_accession+';'+b.run_accession)}")
+            try:
+                print(f"no quantified transcripts found in {seq(runs).reduce(lambda a,b: a.run_accession+';'+b.run_accession)}")
+            except:
+                print(f"no quantified transcripts (second try) found in {seq(runs)}")
             return SpeciesExpressions.empty(species)
 
 
@@ -206,8 +215,8 @@ class Cells:
     toc_samples: pl.DataFrame
     cache_folder: Path
 
-    #samples: List[Sample]
     species_expressions: list[SpeciesExpressions]
+    species_expressions_by_name: dict[str, SpeciesExpressions]
 
 
     def __init__(self, folder: Path):
@@ -224,7 +233,11 @@ class Cells:
             self.species_expressions = SpeciesExpressions.summaries_from_samples(self.samples)
             self.cache_folder.mkdir(exist_ok=True, parents=True)
             for s in self.species_expressions:
-                s.write(self.cache_folder)
+                if s.gene_expressions is None:
+                    print(f"ERROR, {s.species} has None in gene expressions!")
+                else:
+                    s.write(self.cache_folder)
+        self.species_expressions_by_name = {s.species: s for s in self.species_expressions}
 
 
     def extract_samples_from_row(self, row: dict, autoload: bool = False) -> Sequence:
