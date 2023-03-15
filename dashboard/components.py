@@ -30,7 +30,8 @@ def df_to_table(df: pl.DataFrame, index: str,
                                 sort_action="native",
                                 sort_mode="multi",
                                 column_selectable="single",
-                                row_selectable=row_selectable
+                                row_selectable=row_selectable,
+                                style_table={'overflowX': 'scroll'}
                                 )
 
 def df_to_heatmap(df: pl.DataFrame,  title: str = "Heatmap",

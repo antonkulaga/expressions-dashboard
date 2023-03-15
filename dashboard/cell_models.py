@@ -193,7 +193,7 @@ class SpeciesExpressions:
         if for_dic.len() > 0:
             genes_for_merge = collections.OrderedDict(for_dic)
             merged_genes = genotations.quantification.merge_expressions(genes_for_merge, False)
-            transcripts_for_merge = collections.OrderedDict(seq(runs).map(lambda r: (r.run_accession, r.load().transcripts)).to_list())
+            transcripts_for_merge = collections.OrderedDict(seq(runs).map(lambda r: (r.run_accession, r.load().transcripts)).filter(lambda kv: kv[1] is not None and kv[0] is not None).to_list())
             merged_transcripts = genotations.quantification.merge_expressions(transcripts_for_merge, True)
             merged_summarized_transcripts =  genotations.quantification.with_expressions_summaries(merged_transcripts)
             merged_transcripts_extended = species_info.annotations.with_genes_transcripts_coordinates_only().extend_with_annotations(merged_summarized_transcripts)
