@@ -31,6 +31,10 @@ app.layout = html.Div([
         [html.H1('Gene expressions interface')], className="ui top blue inverted segment"
     ),
     html.Div([
+        "This user interface is devoted to exploring transcript expressions of cell lines that we have.",
+        "For each cell line several samples were quantified. To view, select cell lines of your interest and then pick genes"
+    ], className="ui message"),
+    html.Div([
     df_to_table(cells.toc_samples, index="cells", of_type="samples")]),
     html.Div([
         html.H1('Transcript expressions for selected runs'),
@@ -43,16 +47,13 @@ app.layout = html.Div([
     ], className="ui blue segment")
 ])
 
-def _extract_samples(row: dict) -> Sequence:
-    return seq(row["Samples"].split(",")).map(lambda v: v.strip())
-
-
 def render_species_segment(species: SpeciesExpressions, selected_runs_df: pl.DataFrame):
     options = species.gene_names.select("gene_name").to_series().to_list()
     selected_runs_table = df_to_table(selected_runs_df, f"Selected runs with {species.species}", row_selectable=False)
-    return html.Details([
+    return [
         html.Summary([
-            html.H2(f'Sequencing runs for {species.species}')
+            html.I(className="dropdown icon"),
+           f'Sequencing runs for {species.species}'
         ], className="title"),
         html.Div(
             [ selected_runs_table,
@@ -62,7 +63,7 @@ def render_species_segment(species: SpeciesExpressions, selected_runs_df: pl.Dat
               html.Div( id={ "type": "expressions", "index": species.species })
               ], className="content"
         ),
-    ], className="ui blue accordion")
+    ]
 
 
 
@@ -119,9 +120,15 @@ def render(rows: dict, selected_row_indexes: dict):
     selected_samples: list[Sample] = seq(selected_rows).flat_map(lambda row: cells.extract_samples_from_row(row)).to_list()
     species_names = set([r.scientific_name.replace(" ", "_") for s in selected_samples for r in s.run_list])
     species: list[SpeciesExpressions] = [cells.species_expressions_by_name[species_name] for species_name in species_names if species_name in cells.species_expressions_by_name]
-    selected_samples = seq(selected_rows).flat_map(lambda row: cells.extract_samples_from_row(row)).to_list()
-    results = [render_species_segment(s, Sample.samples_to_df(selected_samples)) for s in species if s.gene_expressions is not None and s.transcript_expressions is not None]
-    return results
+    results = seq([
+        render_species_segment(s, Sample.samples_to_df(selected_samples)) for s in species if s.gene_expressions is not None and s.transcript_expressions is not None
+    ]).flatten().to_list()
+    header = html.H4(["Expressions by species:"], className="ui large header")
+    return html.Div([
+        header,
+        html.Details(results, className="ui blue styled fluid accordion")
+        ]
+    )
 
 
 if __name__ == '__main__':

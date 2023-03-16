@@ -24,15 +24,15 @@ def df_to_table(df: pl.DataFrame, index: str,
         "type": of_type,
         "index": index
     },
-                                style_data_conditional=table_conditional_style,
-                                style_header=table_header_style,
-                                filter_action="native",
-                                sort_action="native",
-                                sort_mode="multi",
-                                column_selectable="single",
-                                row_selectable=row_selectable,
-                                style_table={'overflowX': 'scroll'}
-                                )
+        style_data_conditional=table_conditional_style,
+        style_header=table_header_style,
+        filter_action="native",
+        sort_action="native",
+        sort_mode="multi",
+        column_selectable="single",
+        row_selectable=row_selectable,
+        style_table={'overflowX': 'scroll'}
+        )
 
 def df_to_heatmap(df: pl.DataFrame,  title: str = "Heatmap",
                   row_height: float = 40, col: pl.Expr = pl.col("transcript_name"), tpms: pl.Expr = pl.col("^SRR[a-zA-Z0-9]+$")) -> dcc.Graph:
