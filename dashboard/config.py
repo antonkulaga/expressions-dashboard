@@ -24,8 +24,8 @@ class Locations:
         self.interim.mkdir(exist_ok=True)
         self.output = self.data / "output"
         self.output.mkdir(exist_ok=True)
-        self.cell_lines = self.inputs / "cell_lines"
+        self.cell_lines = self.inputs / "CELL_LINES"
         self.cell_lines.mkdir(exist_ok=True)
         self.muscle_differentiation = self.inputs / "muscle_differentiation"
-        self.cell_lines_cache = self.cell_lines / "CACHE"
+        self.cell_lines_cache = self.inputs / "CACHE"
         self.cell_lines_cache.mkdir(exist_ok=True, parents=True)

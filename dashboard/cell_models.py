@@ -224,13 +224,13 @@ class Cells:
     species_expressions: list[SpeciesExpressions]
     species_expressions_by_name: dict[str, SpeciesExpressions]
 
-    def __init__(self, folder: Path):
+    def __init__(self, folder: Path, cache_folder: Path):
         self.folder = folder.absolute().resolve()
         self.toc_path = self.folder / "cell_lines_toc.tsv"
         self.toc = pl.read_csv(str(self.toc_path), sep="\t")
         self.toc_samples = self.update_with_samples(self.toc).sort(pl.col("samples processed"), reverse=True)
         self.samples = self.extract_all_samples()
-        self.cache_folder = folder / "CACHE"
+        self.cache_folder = cache_folder
         if self.cache_folder.exists() and files(self.cache_folder).len() >= 3:
             self.species_expressions = SpeciesExpressions.load_summaries_from(self.cache_folder)
         else:

@@ -13,7 +13,7 @@ app = dash.Dash(__name__, suppress_callback_exceptions=True)
 
 base = Path("..") if (Path("..") / "dashboard").exists() else Path(".")
 locations = Locations(base)
-cells = Cells(locations.cell_lines)
+cells = Cells(locations.cell_lines, locations.cell_lines_cache)
 external_scripts = [
     'https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js',
     'https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.js'
@@ -32,7 +32,8 @@ app.layout = html.Div([
     ),
     html.Div([
         "This user interface is devoted to exploring transcript expressions of cell lines that we have.",
-        "For each cell line several samples were quantified. To view, select cell lines of your interest and then pick genes"
+        "For each cell line several samples were quantified. To view, select cell lines of your interest and then pick genes",
+        "Expressions are output on per-species bases, you should open the accordion with corresponding species name"
     ], className="ui message"),
     html.Div([
     df_to_table(cells.toc_samples, index="cells", of_type="samples")]),
@@ -100,9 +101,10 @@ def render_species(rows: dict, selected_row_indexes: dict, min_avg_expression: f
     #preparing tables
     heatmap = df_to_heatmap(selected_transcripts, f"{species_name} samples expression heatmap", heatmap_row)
     species_table = df_to_table(selected_transcripts, selected_species.species+"_transcripts", row_selectable=False)
-    message = f"as no genes were selected, showing top {top_genes_number} transcripts by avg expression" if no_genes else f"Expression of {genes}"
+    message = f"as no genes were selected, showing top {top_genes_number} transcripts by avg expression" if no_genes else f"Expression of {', '.join(genes)}"
     return html.Div([
         html.H4(message),
+        f"Only transcripts with minimal expressions higher than {min_avg_expression} TPM are shown",
         heatmap,
         species_table
                      ])
