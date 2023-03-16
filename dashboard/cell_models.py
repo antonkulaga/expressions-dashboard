@@ -89,8 +89,10 @@ class Sample:
 
     def __init__(self, folder: Path, autoload_runs: bool = False):
         self.folder = folder.absolute().resolve()
-        self.meta = pl.read_csv(folder / f"{folder.name}.tsv", sep="\t")
         self.parent_name = self.folder.parent.name
+        meta = pl.read_csv(folder / f"{folder.name}.tsv", sep="\t")
+        meta_cols = seq(meta.columns).map(lambda c: pl.col(c)).to_list()
+        self.meta = meta.select([pl.lit(self.parent_name).alias("parent")]+ meta_cols )
         self.run_list = [Run(d, folder, autoload_runs) for d in self.meta.to_dicts()]
 
 
@@ -226,8 +228,7 @@ class Cells:
         self.folder = folder.absolute().resolve()
         self.toc_path = self.folder / "cell_lines_toc.tsv"
         self.toc = pl.read_csv(str(self.toc_path), sep="\t")
-        with_samples = self.toc.filter(pl.col("Samples").str.contains("SAMN"))
-        self.toc_samples = self.update_with_samples(with_samples)
+        self.toc_samples = self.update_with_samples(self.toc).sort(pl.col("samples processed"), reverse=True)
         self.samples = self.extract_all_samples()
         self.cache_folder = folder / "CACHE"
         if self.cache_folder.exists() and files(self.cache_folder).len() >= 3:
@@ -253,22 +254,10 @@ class Cells:
 
     def update_with_samples(self, toc: pl.DataFrame):
         quantified_samples = pl.col("Cell line name").apply(lambda c: seq(self.samples_quant_partition(c)[0]).map(lambda d: d.name).to_list(), pl.List(pl.Utf8)).alias("quantified_samples")
-        non_quantified_samples = pl.col("Cell line name").apply(lambda c: seq(self.samples_quant_partition(c)[1]).map(lambda d: d.name).to_list(), pl.List(pl.Utf8)).alias("non_quantified_samples")
-        #quantified_samples = pl.col("Cell line name").apply(lambda c: self.samples_quant_partition(c)[0]).alias("quantified_samples")
-        #non_quantified_samples = pl.col("Cell line name").apply(lambda c: self.samples_quant_partition(c)[1]).alias("non_quantified_samples")
-        return toc.with_columns([quantified_samples, non_quantified_samples]).drop("Samples")
-
-    """
-    def extract_samples_from_row(self, row: dict, autoload: bool = False) -> Sequence:
-        cell_line: str = row["Cell line name"]
-        cell_line_folder = (self.folder / cell_line.strip()).absolute().resolve()
-        if not cell_line_folder.exists():
-            print(f"cell line {cell_line_folder} does not seem to exist!")
-            return []
-        return seq(row["Samples"].split(",")).map(lambda s: cell_line_folder / s.strip())\
-            .filter(lambda s: s.exists() and (s / f"{s.name}.tsv").exists())\
-            .map(lambda f: Sample(f, autoload))
-    """
+        non_quantified_samples = pl.col("Cell line name").apply(lambda c: seq(self.samples_quant_partition(c)[1]).map(lambda d: d.name).to_list(), pl.List(pl.Utf8)).alias("samples_in_work")
+        total = quantified_samples.apply(lambda l: len(l)).alias("samples processed")
+        cols = seq(toc.columns).filter(lambda c: c!="Samples").map(lambda c: pl.col(c)).to_list()
+        return toc.select(cols[0:1] + [total] + cols[1:] + [quantified_samples, non_quantified_samples, pl.col("Samples").alias("Samples planned")])
 
     def extract_samples_from_row(self, row: dict, autoload: bool = False) -> Sequence:
         """
@@ -285,33 +274,6 @@ class Cells:
     def extract_all_samples(self, autoload: bool = False) -> list[Sample]:
         dic_list: list[dict] = self.toc_samples.select([pl.col("Cell line name"), pl.col("quantified_samples")]).to_dicts()
         return seq(dic_list).flat_map(lambda d: self.extract_samples_from_row(d, autoload)).to_list()
-
-    """
-    def _update_with_quantified(self, line: str, quantified: bool):
-        sub = self.folder / line
-        if not sub.exists() or dirs(sub).len() == 0:
-            print(f"{sub} does not exist!")
-            return []
-        samples = dirs(sub)
-        quantified = samples.partition(lambda s: dirs(s).exists(lambda r: dirs(r).exists(lambda )))
-
-    def get_runs(self, line: str, quantified: bool):
-        def check_run(run: Path):
-            q = dirs(run).exists(lambda d: d.name.startswith("quant_") and files(d).exists(lambda f: ".sf" in f.name))
-            return q if quantified else not q
-        sub = self.folder / line
-        if not sub.exists() or dirs(sub).len()==0:
-            print(f"{sub} does not exist!")
-            return []
-        runs = dirs(sub).flat_map(lambda s: dirs(s).filter(check_run)).map(lambda r: r.name)
-        return runs
-
-    def update_toc_with_samples(self, toc: pl.DataFrame):
-        quantified_runs = pl.col("Cell line name").apply(lambda c: self.get_runs(c, True)).alias("quantified_runs")
-        non_quantified_runs = pl.col("Cell line name").apply(lambda c: self.get_runs(c, False)).alias("non_quantified_runs")
-        return toc.with_columns([quantified_runs, non_quantified_runs])
-    """
-
 
 
 

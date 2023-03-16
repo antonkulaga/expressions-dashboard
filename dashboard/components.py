@@ -35,7 +35,10 @@ def df_to_table(df: pl.DataFrame, index: str,
         )
 
 def df_to_heatmap(df: pl.DataFrame,  title: str = "Heatmap",
-                  row_height: float = 40, col: pl.Expr = pl.col("transcript_name"), tpms: pl.Expr = pl.col("^SRR[a-zA-Z0-9]+$")) -> dcc.Graph:
+                  row_height: float = 40,
+                  col: pl.Expr = pl.col("transcript_name"),
+                  tpms: pl.Expr = pl.col("^SRR[a-zA-Z0-9]+$"),
+                  ) -> dcc.Graph:
     from dash import dcc
     import plotly.express as px
 
@@ -52,4 +55,7 @@ def df_to_heatmap(df: pl.DataFrame,  title: str = "Heatmap",
                     title=title
                     )
     fig.update_xaxes(side="top", tickfont = dict(size=20))
-    return dcc.Graph(figure=fig)
+    return dcc.Graph(figure=fig, id = {
+        "id": "heatmap",
+        "index": title
+    })

@@ -98,7 +98,7 @@ def render_species(rows: dict, selected_row_indexes: dict, min_avg_expression: f
     selected_transcripts = transcripts_with_samples.head(top_genes_number).sort(pl.col("sum_TPM"), reverse=True) if no_genes \
         else transcripts_with_samples.filter(pl.col("gene_name").is_in(genes)).sort(pl.col("sum_TPM"), reverse=True)
     #preparing tables
-    heatmap = df_to_heatmap(selected_transcripts, "Transcript expression heatmap", heatmap_row)
+    heatmap = df_to_heatmap(selected_transcripts, f"{species_name} samples expression heatmap", heatmap_row)
     species_table = df_to_table(selected_transcripts, selected_species.species+"_transcripts", row_selectable=False)
     message = f"as no genes were selected, showing top {top_genes_number} transcripts by avg expression" if no_genes else f"Expression of {genes}"
     return html.Div([
@@ -120,8 +120,10 @@ def render(rows: dict, selected_row_indexes: dict):
     selected_samples: list[Sample] = seq(selected_rows).flat_map(lambda row: cells.extract_samples_from_row(row)).to_list()
     species_names = set([r.scientific_name.replace(" ", "_") for s in selected_samples for r in s.run_list])
     species: list[SpeciesExpressions] = [cells.species_expressions_by_name[species_name] for species_name in species_names if species_name in cells.species_expressions_by_name]
+    for s in species:
+        print(f"SPECIES {s.species}")
     results = seq([
-        render_species_segment(s, Sample.samples_to_df(selected_samples)) for s in species if s.gene_expressions is not None and s.transcript_expressions is not None
+        render_species_segment(s, Sample.samples_to_df(selected_samples).filter(pl.col("scientific_name").str.contains(s.species))) for s in species if s.gene_expressions is not None and s.transcript_expressions is not None
     ]).flatten().to_list()
     header = html.H4(["Expressions by species:"], className="ui large header")
     return html.Div([
