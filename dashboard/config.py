@@ -15,6 +15,7 @@ class Locations:
     cell_lines: Path
     cell_lines_cache: Path
     muscle_differentiation: Path
+    toc: Path
     def __init__(self, base: Path):
         self.base = base.absolute().resolve()
         self.data = base / "data"
@@ -29,3 +30,4 @@ class Locations:
         self.muscle_differentiation = self.inputs / "muscle_differentiation"
         self.cell_lines_cache = self.inputs / "CACHE"
         self.cell_lines_cache.mkdir(exist_ok=True, parents=True)
+        self.toc = self.inputs / "cell_lines_toc.tsv"

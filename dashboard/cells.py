@@ -13,7 +13,7 @@ app = dash.Dash(__name__, suppress_callback_exceptions=True)
 
 base = Path("..") if (Path("..") / "dashboard").exists() else Path(".")
 locations = Locations(base)
-cells = Cells(locations.cell_lines, locations.cell_lines_cache)
+cells = Cells(locations.cell_lines, locations.cell_lines_cache, locations.toc)
 external_scripts = [
     'https://cdn.jsdelivr.net/npm/jquery@3.6.3/dist/jquery.min.js',
     'https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.2/dist/semantic.min.js'
