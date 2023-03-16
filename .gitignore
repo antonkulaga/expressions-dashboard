@@ -135,3 +135,5 @@ dmypy.json
 data/output/*
 *.whl
 Footer
+
+data/inputs/CELL_LINES/*

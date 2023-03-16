@@ -76,21 +76,21 @@ class Sample:
     gene_expressions: pl.DataFrame
     transcript_expressions: pl.DataFrame
     parent_name: str
+    accession: str
 
     @staticmethod
     def samples_to_df(samples: list['Sample']) -> Optional[pl.DataFrame]:
         metas = seq(samples).map(lambda s: s.meta).to_list()
         if len(metas) == 0:
             return None
-        elif len(metas) == 1:
-            return metas[0]
         else:
             return pl.concat(metas).with_column(pl.col("scientific_name").str.replace(" ", "_"))
 
-    def __init__(self, folder: Path, autoload_runs: bool = False):
+    def __init__(self, folder: Path, autoload_runs: bool = False, meta_df: Optional[pl.DataFrame] = None):
         self.folder = folder.absolute().resolve()
+        self.accession = self.folder.name
         self.parent_name = self.folder.parent.name
-        meta = pl.read_csv(folder / f"{folder.name}.tsv", sep="\t")
+        meta = pl.read_csv(folder / f"{folder.name}.tsv", sep="\t") if meta_df is None else meta_df.filter(pl.col("render_species") == self.accession)
         meta_cols = seq(meta.columns).map(lambda c: pl.col(c)).to_list()
         self.meta = meta.select([pl.lit(self.parent_name).alias("parent")]+ meta_cols )
         self.run_list = [Run(d, folder, autoload_runs) for d in self.meta.to_dicts()]
@@ -152,11 +152,11 @@ class SpeciesExpressions:
         transcript_expressions_path = folder / f"{self.species}_transcript_expressions.parquet"
         transcript_expressions_with_exons_path = folder / f"{self.species}_transcript_expressions_with_exons.parquet"
         gene_names_path = folder / f"{self.species}_gene_names.parquet"
+        print(f"writing {gene_expressions_path} and {transcript_expressions_path}")
         self.gene_expressions.write_parquet(str(gene_expressions_path), compression_level=22, use_pyarrow=True)
         self.transcript_expressions.write_parquet(str(transcript_expressions_path), compression_level=22, use_pyarrow=True)
         self.transcript_expressions_with_exons.write_parquet(str(transcript_expressions_with_exons_path), compression_level=22, use_pyarrow=True)
         self.annotator().gene_names_df.filter(pl.col("gene_name").is_not_null()).write_parquet(gene_names_path, compression_level=22, use_pyarrow=True)
-        print(f"writing {gene_expressions_path} and {transcript_expressions_path}")
         return folder
 
     def annotator(self) -> genotations.genomes.Annotations:
@@ -216,7 +216,6 @@ class SpeciesExpressions:
 class Cells:
 
     folder: Path
-    toc_path: Path
     toc: pl.DataFrame
     toc_samples: pl.DataFrame
     cache_folder: Path
@@ -224,14 +223,14 @@ class Cells:
     species_expressions: list[SpeciesExpressions]
     species_expressions_by_name: dict[str, SpeciesExpressions]
 
-    def __init__(self, folder: Path, cache_folder: Path):
+    def __init__(self, folder: Path, cache_folder: Path, toc_path: Path = None):
         self.folder = folder.absolute().resolve()
-        self.toc_path = self.folder / "cell_lines_toc.tsv"
+        self.toc_path = self.folder.parent / "cell_lines_toc.tsv" if toc_path is None else toc_path
         self.toc = pl.read_csv(str(self.toc_path), sep="\t")
         self.toc_samples = self.update_with_samples(self.toc).sort(pl.col("samples processed"), reverse=True)
         self.samples = self.extract_all_samples()
         self.cache_folder = cache_folder
-        if self.cache_folder.exists() and files(self.cache_folder).len() >= 3:
+        if self.cache_folder.exists() and files(self.cache_folder).filter(lambda f: "parquet" in f.name).len() >= 3:
             self.species_expressions = SpeciesExpressions.load_summaries_from(self.cache_folder)
         else:
             print(f"no cache folder found, producing expressions from samples and writing cache to {self.cache_folder}!")
@@ -242,8 +241,18 @@ class Cells:
                     print(f"ERROR, {s.species} has None in gene expressions!")
                 else:
                     s.write(self.cache_folder)
+            self.write_samples(self.cache_folder)
         self.species_expressions_by_name = {s.species: s for s in self.species_expressions}
 
+    def write_samples(self, folder: Optional[Path] = None):
+        if folder is None:
+            folder = self.cache_folder
+        meta_path = folder / "samples_meta.parquet"
+        print(f"writing samples metas to {meta_path}")
+        pl.concat(seq(self.samples).map(lambda s: s.meta).to_list()).write_parquet(str(meta_path))
+        toc_path = folder / "samples_toc.parquet"
+        print(f"writing advanced toc to {toc_path}")
+        self.toc_samples.write_parquet(str(toc_path))
 
     def samples_quant_partition(self, cell_line: str) -> tuple[list, list]:
         folder = self.folder / cell_line

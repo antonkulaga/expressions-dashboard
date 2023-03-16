@@ -3,7 +3,7 @@ Alpha TC1 clone 6	https://www.cellosaurus.org/CVCL_B036	Homo_sapiens	Alpha Cells
 Glu-Tag	https://www.cellosaurus.org/CVCL_J406	Mus_musculus	Murine enteroendocrine		SAMN25059472, SAMN25059473, SAMN25059474, SAMN25059475	INS-1+EDEM1, EDEM2, EDEM3, XTP-3B, OS-9.1, OS9.2 (IBAR)	Molecular Cell Biology Department	Drucker/F Pena	
 INS-1	https://www.cellosaurus.org/CVCL_0352	Rattus_norvegicus	Celule Beta de insulinom 	Insulinom/Pancreas	SAMN07421988, SAMN07421989, SAMN07421987, SAMN07421986	INS-1+EDEM1, EDEM2, EDEM3, XTP-3B, OS-9.1, OS9.2 (IBAR), INS-1 shEDEM1(IBAR) 	Molecular Cell Biology Department	Donatie Dr. Donatie Dr. Peter van der Sluijs, Univ. Utrecht, Olanda	
 1.1B4	https://www.cellosaurus.org/CVCL_1778	Homo_sapiens	Betta cells, problematic cell line	Pancreas	N/A		Molecular Cell Biology Department	Sigma-Aldrich	Classified by Celausaurus as problematic
-PANC-1	https://www.cellosaurus.org/CVCL_0480	Rattus_norvegicus	Beta cells	Pancreas	SAMN10460093, SAMN06642004		Molecular Cell Biology Department		
+PANC-1	https://www.cellosaurus.org/CVCL_0480	Homo_sapiens	Beta cells	Pancreas	SAMN10460093, SAMN06642004		Molecular Cell Biology Department		
 MelJuSo	https://www.cellosaurus.org/CVCL_1403	Homo_sapiens	Celule de melanom uman faza VGP	Melanoma	SAMN07168087, SAMN07168088, SAMN07168089, SAMN07168090, SAMN07168091, SAMN07168092	MJS DCT-KO (tehnologia Crispr/Cas 9) (IBAR) 	Molecular Cell Biology Department		
 SKMel 28	https://www.cellosaurus.org/CVCL_0526	Homo_sapiens	Celule melanom uman , amelanotic metastatic	Melanoma			Molecular Cell Biology Department	ATCC accession no. HTB-72	
 SKMel 23	https://www.cellosaurus.org/CVCL_6027	Homo_sapiens	Melanoma	Melanoma	SRR11319892, SRR11319893		Molecular Cell Biology Department		

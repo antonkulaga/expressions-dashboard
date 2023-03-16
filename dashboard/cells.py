@@ -50,23 +50,20 @@ app.layout = html.Div([
 
 def render_species_segment(species: SpeciesExpressions, selected_runs_df: pl.DataFrame):
     options = species.gene_names.select("gene_name").to_series().to_list()
-    selected_runs_table = df_to_table(selected_runs_df, f"Selected runs with {species.species}", row_selectable=False)
-    return [
-        html.Summary([
-            html.I(className="dropdown icon"),
-           f'Sequencing runs for {species.species}'
-        ], className="title"),
-        html.Div(
-            [ selected_runs_table,
-              html.Div(["Select genes of your interest:"], className="ui label"),
-              dcc.Dropdown(options, multi=True, id={ "type": "genes", "index": species.species}),
-              html.H3("Transcript expressions:"),
-              html.Div( id={ "type": "expressions", "index": species.species })
-              ], className="content"
-        ),
-    ]
-
-
+    selected_runs_table = df_to_table(selected_runs_df, f"selected_runs_of_{species.species}", row_selectable=False)
+    summary = html.Summary([
+        html.I(className="dropdown icon"),
+        f'Sequencing runs for {species.species}'
+    ], className="title")
+    content = html.Div([
+        selected_runs_table,
+        html.Div(["Select genes of your interest:"], className="ui label segment"),
+        dcc.Dropdown(options, multi=True, id={ "type": "genes", "index": species.species}),
+        html.H3("Transcript expressions:"),
+        html.Div([], id={ "type": "expressions", "index": species.species })
+    ], className="content")
+    children = [summary, content]
+    return html.Details(children, className="ui fluid accordion blue segment")
 
 @app.callback(
     Output({'type': 'expressions', 'index': MATCH}, "children"),
@@ -86,7 +83,7 @@ def render_species(rows: dict, selected_row_indexes: dict, min_avg_expression: f
     print(f"GENES ARE {genes}")
     selected_species = cells.species_expressions_by_name[species_name]
     selected_indexes = [] if selected_row_indexes is None else selected_row_indexes
-    selected_rows = [rows[i] for i in selected_indexes]
+    selected_rows = [rows[i] for i in selected_indexes if rows[i]["samples processed"] != 0 and rows[i]["samples processed"] != "0"]
     selected_samples = seq(selected_rows).flat_map(lambda row: cells.extract_samples_from_row(row))
     selected_run_list: list[str] = selected_samples.flat_map(lambda s: [run.run_accession for run in s.run_list if run.scientific_name.replace(" ", "_") == species_name]).to_list()
     if len(selected_run_list) < 1:
@@ -94,20 +91,20 @@ def render_species(rows: dict, selected_row_indexes: dict, min_avg_expression: f
     cols = seq(selected_species.transcript_expressions.columns)\
         .filter_not(lambda c: c.startswith("SRR") and c not in selected_run_list)\
         .to_list()
-    transcripts_with_samples = selected_species.transcript_expressions.select(cols).filter(pl.col("avg_TPM") >= min_avg_expression)
+    transcripts_with_samples_unfiltered = selected_species.transcript_expressions.select(cols)
+    transcripts_with_samples = transcripts_with_samples_unfiltered.select(cols).filter(pl.col("avg_TPM") >= min_avg_expression)
     top_genes_number = 25
     selected_transcripts = transcripts_with_samples.head(top_genes_number).sort(pl.col("sum_TPM"), reverse=True) if no_genes \
         else transcripts_with_samples.filter(pl.col("gene_name").is_in(genes)).sort(pl.col("sum_TPM"), reverse=True)
     #preparing tables
-    heatmap = df_to_heatmap(selected_transcripts, f"{species_name} samples expression heatmap", heatmap_row)
+    heatmap = df_to_heatmap(selected_transcripts, f"{species_name} samples expression heatmap", heatmap_row, index=species_name.replace(" ", "_")) if selected_transcripts.shape[0] > 2 else html.Div(["At least 3 transcripts expressing higher than minimum are needed for the heatmap!"], className="ui message")
     species_table = df_to_table(selected_transcripts, selected_species.species+"_transcripts", row_selectable=False)
     message = f"as no genes were selected, showing top {top_genes_number} transcripts by avg expression" if no_genes else f"Expression of {', '.join(genes)}"
     return html.Div([
         html.H4(message),
         f"Only transcripts with minimal expressions higher than {min_avg_expression} TPM are shown",
         heatmap,
-        species_table
-                     ])
+        species_table])
 
 @app.callback(
     Output('selection_results', "children"),
@@ -118,21 +115,21 @@ def render(rows: dict, selected_row_indexes: dict):
     selected_indexes = [] if selected_row_indexes is None else selected_row_indexes
     if not selected_indexes:
         return html.Div(["Select cell lines!"])
-    selected_rows = [rows[i] for i in selected_indexes]
+    selected_rows = [rows[i] for i in selected_indexes if rows[i]["samples processed"] != 0 and rows[i]["samples processed"] != "0"]
     selected_samples: list[Sample] = seq(selected_rows).flat_map(lambda row: cells.extract_samples_from_row(row)).to_list()
     species_names = set([r.scientific_name.replace(" ", "_") for s in selected_samples for r in s.run_list])
     species: list[SpeciesExpressions] = [cells.species_expressions_by_name[species_name] for species_name in species_names if species_name in cells.species_expressions_by_name]
     for s in species:
-        print(f"SPECIES {s.species}")
+        print(f"SPECIES {s.species} with {s.gene_expressions.shape} genes and {s.transcript_expressions.shape} transcripts")
+    selected_samples_df = Sample.samples_to_df(selected_samples)
     results = seq([
-        render_species_segment(s, Sample.samples_to_df(selected_samples).filter(pl.col("scientific_name").str.contains(s.species))) for s in species if s.gene_expressions is not None and s.transcript_expressions is not None
-    ]).flatten().to_list()
-    header = html.H4(["Expressions by species:"], className="ui large header")
-    return html.Div([
-        header,
-        html.Details(results, className="ui blue styled fluid accordion")
-        ]
-    )
+        render_species_segment(s, selected_samples_df.filter(pl.col("scientific_name") == s.species)) for s in species if s.gene_expressions is not None and s.transcript_expressions is not None
+    ]).to_list()
+    header = html.H4("Expressions by species:", className="ui large header")
+    message = html.P("Toggle species to see expression results!")
+    children = [header, message] + results
+    print(f"RESULTS {len(results)}")
+    return children
 
 
 if __name__ == '__main__':
